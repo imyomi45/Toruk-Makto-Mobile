@@ -1,0 +1,192 @@
+Ditto API Interface Description
+Request Method : POST
+문서버전 : 0.0.2b
+
+API목록 :
+API명			설명					request변수						response변수
+-----------------------------------------------------------------------------------------------
+register		사용자등록				uuid, phoneNum, nums[]		/	appkey
+login			로그인				uuid, timestamp, signature	/	token
+friendList		친구목록				token						/	{uuid, name, imageTs, message}
+aroundList		주변사람목록			token, lon, lat				/	{uuid, name}
+addFriendByUuid	uuid로 친구추가			token, uuid					/	uuid, name, message
+addFriendByNum	전화번호로 친구추가		token, phoneNum				/	uuid, name, message
+modifyProfile	프로필 변경				token, name, message, imgFlag, image
+receivingMaum	받고있는 마음목록			token		/	count, {uuid, mcode, mstring, sndDate, rcvDate}
+sendingMaum		보내고 있는 마음목록		token		/	{uuid, mcode, mstring, sndDate, itmString}
+sendMaum		마음보내기				token, mcode, mstring, item, delay
+useItem0		70%의진실 아이템 사용하기	token, uuid					/	remain, uuid, mcode
+useItem1		마음확장 아이템 사용하기	token						/	count
+cancelMaum		보내고 있는 마음 취소하기	token, uuid, mcode
+hideMaum		매칭된 마음 그만보기		token, uuid, mcode
+
+사용방법 예 :
+http://localhost:8080/Api/register.php에 POST방식으로
+uuid, phoneNum, nums[]를 넘겨주면
+결과코드와 appKey가 json형식으로 반환됨( {code:1, appkey:"1234567890"} )
+
+모든 Api의 반환결과는 결과코드가 포함된다.
+성공시엔 1, 그렇지 않으면 해당되는 에러코드가 출력된다. ( {code:502, message:"이미 등록되어있는 마음임"}
+
+=================================================
+register
+# 사용자 등록을 해주는 API.
+# 프로그램 설치후 최초실행 1회만 호출.
+	request :
+		uuid		#앱고유번호	(UUID, http://huewu.blog.me/110107222113 참조. 사용자ID와 같은 역할)
+		phoneNum	#국가코드+전화번호 (전화번호 없는 기기는 그냥 빈 문자열)
+		nums[]		#주소록에 저장되어있는 사람들의 국가코드+전화번호 리스트
+	response :
+		appKey		#인증키값
+=================================================
+login
+# 프로그램이 실행 될 때마다 호출.
+	request :
+		uuid		#앱고유번호
+		timestamp	#현재시간	(현재 2009-02-14 08:31:30일 경우 : =1228548141)
+		signature	#서명		(=SHA512(timestamp + uuid + appKey)
+	response :
+		token		#인증토큰
+=================================================
+friendList
+# 친구목록 받아오기
+# 프로그램이 활성화 될 때마다 호출.
+	request :
+		token		#인증토큰
+	response(JSON) :
+		list[]
+			uuid	#친구의 앱고유번호
+			name	#이름
+			imageTs	#프로필사진 바뀐 날짜(TimeStamp)
+			message	#남김말
+# 프로필사진은 "Api/profileImg/" + uuid 로 접근하면됨 
+=================================================
+aroundList
+# 주변 사용자 검색하기
+	request :
+		token		#인증토큰
+		lon			#경도(Longitude)
+		lat			#위도(Latitude)
+	response :
+		list[]
+			uuid	#앱고유번호
+			name	#이름
+=================================================
+addFriendByUuid
+# uuid로 친구 추가
+	request :
+		token		#인증토큰
+		uuid		#친구앱고유번호
+	response :
+		uuid		#친구앱고유번호
+		name		#이름
+		message		#남김말
+=================================================
+addFriendByNum
+# 전화번호로 친구 추가
+	request :
+		token		#인증토큰
+		phoneNum	#친구전화번호(국가코드+전화번호)
+	response :
+		uuid		#친구앱고유번호
+		name		#이름
+		message		#남김말
+=================================================
+modifyProfile
+# 프로필 변경
+	request :
+		token		#인증토큰
+		name		#이름
+		message		#남김말
+		imgFlag		#프로필사진 변경 여부; 0이면 변경안함, 1이면 변경, 2이면 삭제
+		image		#프로필사진
+	response :
+=================================================
+receivingMaum
+# 받고있는 마음 수/이뤄진 마음 목록보기
+	request :
+		token		#인증토큰
+	response :
+		count		#받고있는 마음 수
+		list[]		#연결된 마음
+			uuid	#상대방 앱고유번호
+			mcode	#마음코드
+			mstring	#마음문자열(마음코드가 800일 때, 즉 사용자정의 문자열 일때만 사용)
+			sndDate	#입력한 날짜
+			rcvDate	#이뤄진 날짜
+=================================================
+sendingMaum
+# 보내고 있는 마음 목록보기
+	request :
+		token		#인증토큰
+	response :
+		list[]
+			uuid	#상대방 앱고유번호
+			mcode	#마음코드
+			mstring	#마음문자열(마음코드가 800일 때, 즉 사용자정의 문자열 일때만 사용)
+			sndDate	#입력한 날짜
+			itmString	#아이템 사용정보(ex: "", "9시간 이후 알림을 받습니다.", "나에게만 매칭 정보가 나타납니다.")
+=================================================
+sendMaum
+# 마음 보내기
+	request :
+		token		#인증토큰
+		mcode		#마음코드
+		mstring		#마음문자열(마음코드가 800일 때, 즉 사용자정의 문자열 일때만 사용)
+		item		#아이템 번호(0-사용안함, 1-지연알림, 2-나에게만알림)
+		delay		#지연알림 시간(item 값이 1일때만 사용됨. 단위는 시간) 
+	response :
+=================================================
+useItem0
+#70%의 진실 아이템 사용하기
+	request :
+		token		#인증토큰
+		uuid		#상대방 앱고유번호
+	response :
+		remain		#남은 아이템 갯수
+		uuid		#상대방 앱고유번호
+		mcode		#상대방이 나에게 가지고 있을수도 있는 마음코드(확률은 70%)
+=================================================
+useItem1
+#마음 확장시키기
+	request :
+		token		#인증토큰
+	response :
+		count		#앞으로 1인당 사용가능한 마음수
+=================================================
+cancelMaum
+#보내고 있는 마음 삭제
+	request :
+		token		#인증토큰
+		uuid		#상대방 앱고유번호
+		mcode		#마음코드
+	response :
+=================================================
+hideMaum
+#이루어진 마음 그만보기
+#더이상 receiveMaum의 결과에서 나타나지 않는다
+	request :
+		token		#인증토큰
+		uuid		#상대방 앱고유번호
+		mcode		#마음코드
+=================================================
+공통에러코드
+#에러 발생시 code와 더불어 message도 날림
+	0	: Argument가 제대로 전달되지 않음
+	1	: 성공(에러아님)
+	인증
+	101 : 앱 고유번호가 서버에 존재하지 않는다(register가 안되어있는 uuid)
+	102 : 인증토큰이 유효하지 않음
+	103 : timestamp의 유효기간이 초과됨 
+	친구
+	201 : 해당 uuid를 사용하는 사용자가 없음
+	202 : 해당 전화번호를 사용하는 사용자가 없음
+	프로필
+	301 : 프로필 사진 이진데이터가 null임
+	아이템
+	401 : 아이템을 보유하고 있지 않음
+	마음
+	501 : 한사람에게 보낼 수 있는 최대 마음갯수가 제한되어 더이상 마음을 보낼 수 없음
+	502 : 이미 등록되어있는 마음임
+	System
+	601 : MySql 에러
